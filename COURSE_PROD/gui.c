@@ -279,7 +279,10 @@ static void update_draw_game(void)
                 return;
             }
 
+            double t_start = GetTime();
             bot_make_move(g_bot);
+            double t_end = GetTime();
+            printf("Bot turn time: %.3f ms\n", (t_end - t_start) * 1000.0);
             g_moves++;
 
             if (history_head &&
