@@ -51,6 +51,8 @@ static int g_auth_method = 0; // 0 - по ID, 1 - по Логину
 static char g_input_buffer[16] = "\0";
 static int g_letter_count = 0;
 
+static double g_bot_total_time = 0.0;
+static int    g_bot_moves_count = 0;
 
 static void txt(const char* text, int x, int y, int size, Color col)
 {
@@ -166,15 +168,31 @@ static void update_draw_menu(void)
 
 }
 
+static void make_bot_move_measured(void)
+{
+    double t_start = GetTime();
+    bot_make_move(g_bot);
+    double t_end = GetTime();
+
+    double ms = (t_end - t_start) * 1000.0;
+    g_bot_total_time += ms;
+    g_bot_moves_count++;
+
+    printf("Bot's turn time for %d turn: %.2f ms | average time: %.2f ms\n",
+        g_bot_moves_count, ms, g_bot_total_time / g_bot_moves_count);
+}
+
 
 static void start_game(void)
 {
     init_board();
+    g_bot_total_time = 0.0;
+    g_bot_moves_count = 0;
     g_over = 0;
     g_moves = 0;
     g_screen = SCR_GAME;
     if (g_bot == CROSS) {
-        bot_make_move(g_bot);
+        make_bot_move_measured();
         g_moves++;
     }
 }
@@ -278,11 +296,7 @@ static void update_draw_game(void)
                 g_screen = SCR_RESULT_WIN;
                 return;
             }
-
-            double t_start = GetTime();
-            bot_make_move(g_bot);
-            double t_end = GetTime();
-            printf("Bot turn time: %.3f ms\n", (t_end - t_start) * 1000.0);
+            make_bot_move_measured();
             g_moves++;
 
             if (history_head &&
