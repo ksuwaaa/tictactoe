@@ -148,18 +148,37 @@ static int get_cands(Cand* ca, CellState cur)
     }
 
     
+    // быстрый отбор методом вставки
     for (r = min_r; r <= max_r; r++) {
         for (c = min_c; c <= max_c; c++) {
             if (is_cand(r, c)) {
-                ca[counter].r = r; ca[counter].c = c;
-                ca[counter].score = cscore(r, c, cur);
-                counter++;
+                int score = cscore(r, c, cur);
+
+                if (counter < MAX_CANDS) {
+                    int i = counter - 1;
+                    while (i >= 0 && ca[i].score < score) {
+                        ca[i + 1] = ca[i];
+                        i--;
+                    }
+                    ca[i + 1].r = r;
+                    ca[i + 1].c = c;
+                    ca[i + 1].score = score;
+                    counter++;
+                }
+                else if (score > ca[MAX_CANDS - 1].score) {
+                    int i = MAX_CANDS - 2;
+                    while (i >= 0 && ca[i].score < score) {
+                        ca[i + 1] = ca[i];
+                        i--;
+                    }
+                    ca[i + 1].r = r;
+                    ca[i + 1].c = c;
+                    ca[i + 1].score = score;
+                }
             }
         }
     }
 
-    qsort(ca, counter, sizeof(Cand), cmp_cand);
-    if (counter > MAX_CANDS) counter = MAX_CANDS;
     return counter;
 }
 
