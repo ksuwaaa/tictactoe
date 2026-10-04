@@ -15,10 +15,6 @@
 #define W3_CLOSED     50
 #define W2_OPEN       10
 
-static int g_min_r = BOARD_SIZE, g_max_r = -1;
-static int g_min_c = BOARD_SIZE, g_max_c = -1;
-typedef struct { int min_r, max_r, min_c, max_c; } BoardBounds;
-
 typedef struct { int r, c, score; } Cand;
 
 static int eval_line(int r, int c, int dr, int dc, CellState p)
@@ -63,24 +59,6 @@ static int cscore(int r, int c, CellState p)
     return s;
 }
 
-
-static BoardBounds push_move_bounds(int r, int c) {
-    BoardBounds old_b = { g_min_r, g_max_r, g_min_c, g_max_c };
-    if (r < g_min_r) g_min_r = r;
-    if (r > g_max_r) g_max_r = r;
-    if (c < g_min_c) g_min_c = c;
-    if (c > g_max_c) g_max_c = c;
-    return old_b;
-}
-
-static void pop_move_bounds(BoardBounds old_b) {
-    g_min_r = old_b.min_r;
-    g_max_r = old_b.max_r;
-    g_min_c = old_b.min_c;
-    g_max_c = old_b.max_c;
-}
-
-
 static int beval(CellState ai)
 {
     static const int DR[4] = { 0, 1, 1,  1 };
@@ -89,8 +67,19 @@ static int beval(CellState ai)
     int s = 0, r, c, i;
 
     // поиск границ
-    int min_r = g_min_r, max_r = g_max_r;
-    int min_c = g_min_c, max_c = g_max_c;
+    int min_r = BOARD_SIZE, max_r = -1;
+    int min_c = BOARD_SIZE, max_c = -1;
+
+    for (r = 0; r < BOARD_SIZE; r++) {
+        for (c = 0; c < BOARD_SIZE; c++) {
+            if (board[r][c] != EMPTY) {
+                if (r < min_r) min_r = r;
+                if (r > max_r) max_r = r;
+                if (c < min_c) min_c = c;
+                if (c > max_c) max_c = c;
+            }
+        }
+    }
 
     if (min_r > max_r) return 0;
 
@@ -130,10 +119,20 @@ static int cmp_cand(const void* a, const void* b)
 static int get_cands(Cand* ca, CellState cur)
 {
     int counter = 0, r, c;
-    int min_r = g_min_r, max_r = g_max_r;
-    int min_c = g_min_c, max_c = g_max_c;
+    int min_r = BOARD_SIZE, max_r = -1;
+    int min_c = BOARD_SIZE, max_c = -1;
 
-    
+    // границы
+    for (r = 0; r < BOARD_SIZE; r++) {
+        for (c = 0; c < BOARD_SIZE; c++) {
+            if (board[r][c] != EMPTY) {
+                if (r < min_r) min_r = r;
+                if (r > max_r) max_r = r;
+                if (c < min_c) min_c = c;
+                if (c > max_c) max_c = c;
+            }
+        }
+    }
 
     // увеличиваем рамку на NEAR_DIST
     if (min_r <= max_r) {
@@ -178,7 +177,6 @@ static int minimax(int depth, int alpha, int beta,
     for (i = 0; i < nc; i++) {
         int r = ca[i].r, c = ca[i].c, val;
 
-        BoardBounds saved = push_move_bounds(r, c);
         board[r][c] = cur;
 
         if (check_win(r, c, cur)) {
@@ -187,19 +185,16 @@ static int minimax(int depth, int alpha, int beta,
                 ? (W5 - (AI_DEPTH - depth))
                 : (-W5 + (AI_DEPTH - depth));
             board[r][c] = EMPTY;
-            pop_move_bounds(saved);
             return val;
         }
 
         if (depth <= 1) {
             val = beval(ai);
             board[r][c] = EMPTY;
-            pop_move_bounds(saved);
         }
         else {
             val = minimax(depth - 1, alpha, beta, !maxing, ai, hu);
             board[r][c] = EMPTY;
-            pop_move_bounds(saved);
         }
 
 
@@ -216,30 +211,12 @@ static int minimax(int depth, int alpha, int beta,
     return best;
 }
 
-
-
-
-
 void bot_make_move(CellState bot_choice)
 {
     CellState hu = (bot_choice == CROSS) ? ZERO : CROSS;
     Cand ca[BOARD_SIZE * BOARD_SIZE];
     int nc, i, br, bc, bs;
-    int r, c;
 
-    //учитываем свежий ход человека
-    g_min_r = BOARD_SIZE; g_max_r = -1;
-    g_min_c = BOARD_SIZE; g_max_c = -1;
-    for (r = 0; r < BOARD_SIZE; r++) {
-        for (c = 0; c < BOARD_SIZE; c++) {
-            if (board[r][c] != EMPTY) {
-                if (r < g_min_r) g_min_r = r;
-                if (r > g_max_r) g_max_r = r;
-                if (c < g_min_c) g_min_c = c;
-                if (c > g_max_c) g_max_c = c;
-            }
-        }
-    }
 
     if (board[BOARD_SIZE / 2][BOARD_SIZE / 2] == EMPTY) {
         board[BOARD_SIZE / 2][BOARD_SIZE / 2] = bot_choice;
@@ -252,19 +229,16 @@ void bot_make_move(CellState bot_choice)
 
 
     for (i = 0; i < nc; i++) {
-        BoardBounds saved = push_move_bounds(ca[i].r, ca[i].c);
         board[ca[i].r][ca[i].c] = bot_choice;
         if (check_win(ca[i].r, ca[i].c, bot_choice)) {
             add_move_to_history(ca[i].r, ca[i].c, bot_choice);
             return;
         }
         board[ca[i].r][ca[i].c] = EMPTY;
-        pop_move_bounds(saved);
     }
 
 
     for (i = 0; i < nc; i++) {
-        BoardBounds saved = push_move_bounds(ca[i].r, ca[i].c);
         board[ca[i].r][ca[i].c] = hu;
         if (check_win(ca[i].r, ca[i].c, hu)) {
             board[ca[i].r][ca[i].c] = bot_choice;
@@ -272,19 +246,16 @@ void bot_make_move(CellState bot_choice)
             return;
         }
         board[ca[i].r][ca[i].c] = EMPTY;
-        pop_move_bounds(saved);
     }
 
-    // Основной поиск минимаксом
+
     bs = INT_MIN; br = ca[0].r; bc = ca[0].c;
     for (i = 0; i < nc; i++) {
-        int r_cand = ca[i].r, c_cand = ca[i].c, s;
-        BoardBounds saved = push_move_bounds(r_cand, c_cand);
-        board[r_cand][c_cand] = bot_choice;
+        int r = ca[i].r, c = ca[i].c, s;
+        board[r][c] = bot_choice;
         s = minimax(AI_DEPTH - 1, INT_MIN, INT_MAX, 0, bot_choice, hu);
-        board[r_cand][c_cand] = EMPTY;
-        pop_move_bounds(saved);
-        if (s > bs) { bs = s; br = r_cand; bc = c_cand; }
+        board[r][c] = EMPTY;
+        if (s > bs) { bs = s; br = r; bc = c; }
     }
     board[br][bc] = bot_choice;
     add_move_to_history(br, bc, bot_choice);
