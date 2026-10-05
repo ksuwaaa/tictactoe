@@ -16,7 +16,8 @@
 #define W2_OPEN       10
 
 typedef struct { int r, c, score; } Cand;
-
+#define CANDS_BUF (BOARD_SIZE * BOARD_SIZE)
+static Cand g_cands[AI_DEPTH][CANDS_BUF];
 static int eval_line(int r, int c, int dr, int dc, CellState p)
 {
     int cnt = 1, oe = 0, nr, nc;
@@ -166,7 +167,7 @@ static int get_cands(Cand* ca, CellState cur)
 static int minimax(int depth, int alpha, int beta,
     int maxing, CellState ai, CellState hu)
 {
-    Cand ca[BOARD_SIZE * BOARD_SIZE];
+    Cand* ca = g_cands[depth];
     CellState cur = maxing ? ai : hu;
     int nc = get_cands(ca, cur);
     int best = maxing ? INT_MIN : INT_MAX;
@@ -214,7 +215,7 @@ static int minimax(int depth, int alpha, int beta,
 void bot_make_move(CellState bot_choice)
 {
     CellState hu = (bot_choice == CROSS) ? ZERO : CROSS;
-    Cand ca[BOARD_SIZE * BOARD_SIZE];
+    Cand* ca = g_cands[0];
     int nc, i, br, bc, bs;
 
 
