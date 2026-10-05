@@ -130,10 +130,20 @@ static int cmp_cand(const void* a, const void* b)
 static int get_cands(Cand* ca, CellState cur)
 {
     int counter = 0, r, c;
-    int min_r = g_min_r, max_r = g_max_r;
-    int min_c = g_min_c, max_c = g_max_c;
+    int min_r = BOARD_SIZE, max_r = -1;
+    int min_c = BOARD_SIZE, max_c = -1;
 
-
+    // границы
+    for (r = 0; r < BOARD_SIZE; r++) {
+        for (c = 0; c < BOARD_SIZE; c++) {
+            if (board[r][c] != EMPTY) {
+                if (r < min_r) min_r = r;
+                if (r > max_r) max_r = r;
+                if (c < min_c) min_c = c;
+                if (c > max_c) max_c = c;
+            }
+        }
+    }
 
     // увеличиваем рамку на NEAR_DIST
     if (min_r <= max_r) {
@@ -149,18 +159,36 @@ static int get_cands(Cand* ca, CellState cur)
     }
 
 
+    // быстрый отбор методом вставки
     for (r = min_r; r <= max_r; r++) {
         for (c = min_c; c <= max_c; c++) {
             if (is_cand(r, c)) {
-                ca[counter].r = r; ca[counter].c = c;
-                ca[counter].score = cscore(r, c, cur);
-                counter++;
+                int score = cscore(r, c, cur);
+
+                if (counter < MAX_CANDS) {
+                    int i = counter - 1;
+                    while (i >= 0 && ca[i].score < score) {
+                        ca[i + 1] = ca[i];
+                        i--;
+                    }
+                    ca[i + 1].r = r;
+                    ca[i + 1].c = c;
+                    ca[i + 1].score = score;
+                    counter++;
+                }
+                else if (score > ca[MAX_CANDS - 1].score) {
+                    int i = MAX_CANDS - 2;
+                    while (i >= 0 && ca[i].score < score) {
+                        ca[i + 1] = ca[i];
+                        i--;
+                    }
+                    ca[i + 1].r = r;
+                    ca[i + 1].c = c;
+                    ca[i + 1].score = score;
+                }
             }
         }
     }
-
-    qsort(ca, counter, sizeof(Cand), cmp_cand);
-    if (counter > MAX_CANDS) counter = MAX_CANDS;
     return counter;
 }
 
