@@ -20,7 +20,8 @@ static int g_min_c = BOARD_SIZE, g_max_c = -1;
 typedef struct { int min_r, max_r, min_c, max_c; } BoardBounds;
 
 typedef struct { int r, c, score; } Cand;
-#define CANDS_BUF (BOARD_SIZE * BOARD_SIZE)
+//#define CANDS_BUF (BOARD_SIZE * BOARD_SIZE)
+#define CANDS_BUF MAX_CANDS 
 static Cand g_cands[AI_DEPTH][CANDS_BUF];
 static int eval_line(int r, int c, int dr, int dc, CellState p)
 {
