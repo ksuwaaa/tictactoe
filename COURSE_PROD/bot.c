@@ -114,7 +114,11 @@ static int is_cand(int r, int c)
 
 static int cmp_cand(const void* a, const void* b)
 {
-    return ((Cand*)b)->score - ((Cand*)a)->score;
+    const Cand* ca = (const Cand*)a;
+    const Cand* cb = (const Cand*)b;
+    if (cb->score != ca->score) return cb->score - ca->score;
+    if (ca->r != cb->r) return ca->r - cb->r;
+    return ca->c - cb->c;
 }
 
 static int get_cands(Cand* ca, CellState cur)
