@@ -16,6 +16,10 @@
 #define W2_OPEN       10
 
 typedef struct { int r, c, score; } Cand;
+static char* g_stack_top = 0;
+static char* g_addr_d3 = 0;
+static char* g_addr_d2 = 0;
+static size_t g_stack_peak = 0;
 #define CANDS_BUF (BOARD_SIZE * BOARD_SIZE)
 static Cand g_cands[AI_DEPTH][CANDS_BUF];
 static int eval_line(int r, int c, int dr, int dc, CellState p)
@@ -84,7 +88,7 @@ static int beval(CellState ai)
 
     if (min_r > max_r) return 0;
 
-  
+
     for (r = min_r; r <= max_r; r++) {
         for (c = min_c; c <= max_c; c++) {
             if (board[r][c] == EMPTY) continue;
@@ -121,6 +125,7 @@ static int cmp_cand(const void* a, const void* b)
     return ca->c - cb->c;
 }
 
+
 static int get_cands(Cand* ca, CellState cur)
 {
     int counter = 0, r, c;
@@ -147,12 +152,12 @@ static int get_cands(Cand* ca, CellState cur)
         max_c = (max_c + NEAR_DIST >= BOARD_SIZE) ? BOARD_SIZE - 1 : max_c + NEAR_DIST;
     }
     else {
-        
+
         min_r = max_r = BOARD_SIZE / 2;
         min_c = max_c = BOARD_SIZE / 2;
     }
 
-    
+
     for (r = min_r; r <= max_r; r++) {
         for (c = min_c; c <= max_c; c++) {
             if (is_cand(r, c)) {
@@ -171,6 +176,11 @@ static int get_cands(Cand* ca, CellState cur)
 static int minimax(int depth, int alpha, int beta,
     int maxing, CellState ai, CellState hu)
 {
+    volatile char m_;
+    if (depth == 3) g_addr_d3 = (char*)&m_;
+    if (depth == 2) g_addr_d2 = (char*)&m_;
+    size_t d_ = (size_t)(g_stack_top - (char*)&m_);
+    if (d_ > g_stack_peak) g_stack_peak = d_;
     Cand* ca = g_cands[depth];
     CellState cur = maxing ? ai : hu;
     int nc = get_cands(ca, cur);
@@ -222,6 +232,11 @@ void bot_make_move(CellState bot_choice)
     Cand* ca = g_cands[0];
     int nc, i, br, bc, bs;
 
+    volatile char top_;
+    g_stack_top = (char*)&top_;
+    g_stack_peak = 0;
+    g_addr_d3 = 0;
+    g_addr_d2 = 0;
 
     if (board[BOARD_SIZE / 2][BOARD_SIZE / 2] == EMPTY) {
         board[BOARD_SIZE / 2][BOARD_SIZE / 2] = bot_choice;
@@ -262,6 +277,9 @@ void bot_make_move(CellState bot_choice)
         board[r][c] = EMPTY;
         if (s > bs) { bs = s; br = r; bc = c; }
     }
+    size_t frame_sz = (g_addr_d3 && g_addr_d2) ? (size_t)(g_addr_d3 - g_addr_d2) : 0;
+    printf("MEMORY | frame minimax: %zu B | peak stack: %zu B\n",
+        frame_sz, g_stack_peak);
     board[br][bc] = bot_choice;
     add_move_to_history(br, bc, bot_choice);
 }

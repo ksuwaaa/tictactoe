@@ -178,7 +178,7 @@ static void make_bot_move_measured(void)
     g_bot_total_time += ms;
     g_bot_moves_count++;
 
-    printf("Bot's turn time for %d turn: %.2f ms | average time: %.2f ms\n",
+    printf("Bot's turn time for %d turn: %.2f ms | average time: %.2f ms\n\n",
         g_bot_moves_count, ms, g_bot_total_time / g_bot_moves_count);
 }
 
